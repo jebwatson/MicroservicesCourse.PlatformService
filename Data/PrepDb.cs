@@ -1,32 +1,46 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using PlatformService.Models;
 
 namespace PlatformService.Data;
 
 public static class PrepDb
 {
-  public static void PrepPopulation(IApplicationBuilder app)
-  {
-    using var serviceScope = app.ApplicationServices.CreateScope();
-    SeedData(serviceScope.ServiceProvider.GetService<AppDbContext>());
-  }
-
-  private static void SeedData(AppDbContext context)
-  {
-    if (context.Platforms.Any())
+    public static void PrepPopulation(IApplicationBuilder app, bool isProd)
     {
-      System.Console.WriteLine("--> We already have data");
-      return;
+        using var serviceScope = app.ApplicationServices.CreateScope();
+        SeedData(serviceScope.ServiceProvider.GetService<AppDbContext>(), isProd);
     }
-    
-    System.Console.WriteLine("--> Seeding Data...");
 
-    context.Platforms.AddRange(
-      new Platform() { Name = "Dot Net", Publisher = "Microsoft", Cost = "Free" },
-      new Platform() { Name = "SQL Server Express", Publisher = "Microsoft", Cost = "Free" },
-      new Platform() { Name = "Kubernetes", Publisher = "Cloud Native Computing Foundation", Cost = "Free" }
-    );
+    private static void SeedData(AppDbContext context, bool isProd)
+    {
+        if (isProd)
+        {
+            System.Console.WriteLine("--> Attempting to apply migrations...");
+            try
+            {
+                context.Database.Migrate();
+            }
+            catch (System.Exception ex)
+            {
+                System.Console.WriteLine($"--> Could not run migrations: {ex.Message}");
+            }
+        }
 
-    context.SaveChanges();
-  }
+        if (context.Platforms.Any())
+        {
+            System.Console.WriteLine("--> We already have data");
+            return;
+        }
+
+        System.Console.WriteLine("--> Seeding Data...");
+
+        context.Platforms.AddRange(
+          new Platform() { Name = "Dot Net", Publisher = "Microsoft", Cost = "Free" },
+          new Platform() { Name = "SQL Server Express", Publisher = "Microsoft", Cost = "Free" },
+          new Platform() { Name = "Kubernetes", Publisher = "Cloud Native Computing Foundation", Cost = "Free" }
+        );
+
+        context.SaveChanges();
+    }
 }

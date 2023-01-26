@@ -5,7 +5,20 @@ using PlatformService.SyncDataServices.Http;
 var builder = WebApplication.CreateBuilder(args);
 
 // Local types
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseInMemoryDatabase("InMem"));
+if (builder.Environment.IsProduction())
+{
+    System.Console.WriteLine("--> Using MySql DB");
+    builder.Services
+      .AddDbContext<AppDbContext>(opt => opt.UseMySql(
+            builder.Configuration.GetConnectionString("PlatformsConn"),
+            new MySqlServerVersion(new Version(8, 0, 32))));
+}
+else
+{
+    System.Console.WriteLine("--> Using InMem DB");
+    builder.Services.AddDbContext<AppDbContext>(opt => opt.UseInMemoryDatabase("InMem"));
+}
+
 builder.Services.AddScoped<IPlatformRepo, PlatformRepo>();
 builder.Services.AddHttpClient<ICommandDataClient, HttpCommandDataClient>();
 
@@ -30,6 +43,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-PrepDb.PrepPopulation(app);
+PrepDb.PrepPopulation(app, builder.Environment.IsProduction());
 
 app.Run();
